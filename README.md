@@ -34,10 +34,17 @@ SUMMARY AI
 │  └─ XLSX/
 │
 ├─ Libraries/			# Directory of defined modules.
-│  ├─ Crawler.py		# The data crawling engine
-│  └─ Trainer.Py		# The model training engine
+│  ├─ Crawler.py		# The data crawling engine.
+│  └─ Trainer.Py		# The model training engine.
 │
 ├─ Models/			# Directory for storing the fine-tuned models.
+│  ├─ bartpho-summarizer/	# bartpho-summarizer model trained
+│  ├─ Other/
+│  └─ Test/
+│
+├─ Resource/			# Directory of resources.
+│
+├─ Test/			# Code Test or Struct Check.
 │
 ├─ .gitignore
 ├─ env.yml			# Defines the Conda environment.

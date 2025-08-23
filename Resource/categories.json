@@ -1,0 +1,96 @@
+{
+    "thoi-su": [
+        "chinh-tri",
+        "huong-toi-ky-nguyen-moi",
+        "80-nam-quoc-khanh",
+        "dan-sinh",
+        "lao-dong-viec-lam",
+        "giao-thong",
+        "quy-hy-vong"
+    ],
+    "the-gioi": [
+        "tu-lieu",
+        "phan-tich",
+        "nguoi-viet-5-chau",
+        "cuoc-song-do-day",
+        "quan-su"
+    ],
+    "kinh-doanh": [
+        "net-zero",
+        "quoc-te",
+        "doanh-nghiep",
+        "chung-khoan",
+        "ebank",
+        "vi-mo",
+        "hang-hoa",
+        "bao-hiem",
+        "tuyen-dung"
+    ],
+    "bat-dong-san": [
+        "chinh-sach",
+        "thi-truong",
+        "du-an",
+        "khong-gian-song",
+        "tu-van"
+    ],
+    "khoa-hoc": [
+        "khoa-hoc-trong-nuoc",
+        "pii-doi-moi-sang-tao",
+        "tin-tuc",
+        "phat-minh",
+        "ung-dung",
+        "the-gioi-tu-nhien",
+        "thuong-thuc"
+    ],
+    "giai-tri": [
+        "gioi-sao",
+        "sach",
+        "phim",
+        "nhac",
+        "thoi-trang",
+        "lam-dep",
+        "san-khau-my-thuat"
+    ],
+    "the-thao": [
+        "bong-da",
+        "du-lieu-bong-da",
+        "marathon",
+        "tennis",
+        "cac-mon-khac",
+        "hau-truong"
+    ],
+    "phap-luat": [
+        "ho-so-pha-an",
+        "tu-van"
+    ],
+    "giao-duc": [
+        "tin-tuc",
+        "tuyen-sinh",
+        "chan-dung",
+        "du-hoc",
+        "thao-luan",
+        "hoc-tieng-anh",
+        "giao-duc-40"
+    ],
+    "suc-khoe": [
+        "tin-tuc",
+        "cac-benh",
+        "vaccine",
+        "song-khoe"
+    ],
+    "doi-song": [
+        "nhip-song",
+        "to-am",
+        "bai-hoc-song",
+        "cooking",
+        "tieu-dung"
+    ],
+    "oto-xe-may": [
+        "thi-truong",
+        "dien-dan",
+        "v-car",
+        "v-bike",
+        "cam-lai",
+        "thi-bang-lai-xe"
+    ]
+}
