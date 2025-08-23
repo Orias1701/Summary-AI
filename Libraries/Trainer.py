@@ -104,7 +104,7 @@ class SummarizationTrainer:
         # 4. Cấu hình các tham số huấn luyện
         training_args = Seq2SeqTrainingArguments(
             output_dir=self.output_model_dir,
-            eval_strategy="epoch", # Đổi lại thành eval_strategy nếu thư viện cũ
+            eval_strategy="epoch", # Thư viện cũ
             learning_rate=self.learning_rate,
             per_device_train_batch_size=self.batch_size,
             per_device_eval_batch_size=self.batch_size,
