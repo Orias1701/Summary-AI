@@ -1,0 +1,43 @@
+# conda env create -f master.yml
+
+name: master
+
+channels:
+  - conda-forge
+  - pytorch
+  - nvidia
+  - defaults
+
+dependencies:
+  # --- Nền tảng và các gói chính từ Conda-forge ---
+  - python=3.11
+  - pip
+  - pytorch
+  - torchvision
+  - torchaudio
+  - pytorch-cuda=12.1
+  - jupyterlab
+  - scikit-learn
+  - pandas
+  - matplotlib
+  
+  # --- Các gói bổ sung cài đặt bằng Pip ---
+  - pip:
+    - transformers
+    - datasets
+    - evaluate
+    - accelerate
+    - sentence-transformers
+    - spacy
+    - faiss-cpu
+    - google-generativeai
+    - beautifulsoup4
+    - tqdm
+    - openpyxl
+    - requests
+    - lxml
+    - rouge-score
+    - sentencepiece
+    - protobuf
+    - ipywidgets
+    - PyMuPDF

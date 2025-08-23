@@ -35,8 +35,8 @@ class VnExpressCrawler:
         # --- Thiết lập đường dẫn file ---
         self.json_dir = os.path.join(self.data_dir, "JSON")
         self.xlsx_dir = os.path.join(self.data_dir, "XLSX")
-        self.json_file = os.path.join(self.json_dir, "vnexpress_articles.jsonl")
-        self.xlsx_file = os.path.join(self.xlsx_dir, "vnexpress_articles.xlsx")
+        self.json_file = os.path.join(self.json_dir, "vnexpress.jsonl")
+        self.xlsx_file = os.path.join(self.xlsx_dir, "vnexpress.xlsx")
 
         # --- Hằng số nội bộ ---
         self.HEADERS = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}

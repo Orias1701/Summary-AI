@@ -1,4 +1,0 @@
-conda create -n crawler python=3.11
-conda activate crawler
-pip install pandas openpyxl
-pip install beautifulsoup4==4.12.3 requests==2.32.3 tqdm==4.66.4
