@@ -13,9 +13,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # --- CONFIGURATION ---
 BASE_URL = "https://vnexpress.net"
 DATA_DIR = "../Database"
-JSON_FILE = os.path.join(f"{DATA_DIR}/JSON", "vnexpress_articles.jsonl")
-XLSX_FILE = os.path.join(f"{DATA_DIR}/XLSX", "vnexpress_articles.xlsx")
+JSON_DIR = os.path.join(DATA_DIR, "JSON")
+XLSX_DIR = os.path.join(DATA_DIR, "XLSX")
+JSON_FILE = os.path.join(JSON_DIR, "vnexpress_articles.jsonl")
+XLSX_FILE = os.path.join(XLSX_DIR, "vnexpress_articles.xlsx")
 MIN_YEAR = 2020
+MIN_WORDS = 300
 MAX_WORDS = 1000
 TARGET_ARTICLES_PER_SUBTYPE = 33
 MAX_CONCURRENT_WORKERS = 10
@@ -24,7 +27,6 @@ REQUEST_TIMEOUT = 30
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
 }
-
 TYPE_DICT = {
     'thoi-su': ['chinh-tri', 'dan-sinh', 'giao-thong'],
     'the-gioi': ['tu-lieu', 'phan-tich', 'quan-su'],
@@ -35,7 +37,6 @@ TYPE_DICT = {
     'giao-duc': ['tin-tuc', 'tuyen-sinh', 'du-hoc'],
     'suc-khoe': ['tin-tuc', 'cac-benh', 'song-khoe'],
 }
-
 VIETNAMESE_DAYS = {
     "Chủ nhật": "Sunday", "Thứ hai": "Monday", "Thứ ba": "Tuesday",
     "Thứ tư": "Wednesday", "Thứ năm": "Thursday", "Thứ sáu": "Friday",
@@ -94,7 +95,7 @@ def get_article_urls(session, category, sub_category):
         page_num += 1
     return urls
 
-def scrape_article_details(session, article_url):
+def scrape_article_details(session, article_url, category, sub_category):
     """Lấy chi tiết nội dung của một bài báo."""
     content = fetch_page_content(session, article_url)
     if not content: return None
@@ -113,74 +114,95 @@ def scrape_article_details(session, article_url):
     article_body = " ".join(p.get_text(" ", strip=True) for p in soup.find_all("p", class_="Normal"))
     word_count = len(article_body.split())
 
-    if 10 < word_count < MAX_WORDS:
+    if MIN_WORDS < word_count < MAX_WORDS:
         return {
-            "url": article_url, "title": title, "description": description,
+            "category": category,
+            "sub_category": sub_category,
+            "url": article_url,
+            "title": title,
+            "description": description,
+            "content": article_body,
             "date": date_obj.strftime("%Y-%m-%d %H:%M:%S"),
-            "content": article_body, "words": word_count,
+            "words": word_count,
         }
     return None
 
-def json_export(all_articles):
-    with open(JSON_FILE, "w", encoding="utf-8") as f:
-        for article in all_articles:
+def load_existing_urls(file_path):
+    """Đọc file jsonl và trả về một set các URL đã tồn tại."""
+    existing_urls = set()
+    if not os.path.exists(file_path):
+        return existing_urls
+    with open(file_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            try:
+                existing_urls.add(json.loads(line)['url'])
+            except (json.JSONDecodeError, KeyError):
+                continue
+    return existing_urls
+
+def json_export(new_articles):
+    """Ghi nối tiếp các bài báo mới vào file JSONL."""
+    with open(JSON_FILE, "a", encoding="utf-8") as f:
+        for article in new_articles:
             f.write(json.dumps(article, ensure_ascii=False) + "\n")
             
-    print(f"Hoàn thành! Dữ liệu đã lưu tại {JSON_FILE}")
+    print(f"Hoàn thành! Đã thêm {len(new_articles)} bài báo mới.")
 
 def xlsx_convert(jsonl_path, xlsx_path):
-    """
-    Đọc dữ liệu từ file JSON Lines và xuất ra file Excel.
-    """
+    """Đọc toàn bộ file JSON Lines và xuất ra file Excel."""
     print(f"Đang đọc dữ liệu từ file: {jsonl_path}")
-    data_list = []
     try:
-        with open(jsonl_path, 'r', encoding='utf-8') as f:
-            for line in f:
-                data_list.append(json.loads(line))
-
+        df = pd.read_json(jsonl_path, lines=True)
     except FileNotFoundError:
         print(f"Lỗi: Không tìm thấy file {jsonl_path}")
         return
-    except json.JSONDecodeError:
-        print(f"Lỗi: File {jsonl_path} có định dạng JSON không hợp lệ.")
-        return
-
-    if not data_list:
-        print("Không có dữ liệu để chuyển đổi.")
-        return
-
-    print("Đang chuyển đổi dữ liệu sang dạng bảng...")
-    df = pd.DataFrame(data_list)
 
     print(f"Đang ghi dữ liệu ra file Excel: {xlsx_path}")
     df.to_excel(xlsx_path, index=False, engine='openpyxl')
-    
-    print(f"Hoàn thành! Đã lưu thành công file tại: {xlsx_path}")
+    print(f"Hoàn thành! Đã lưu file tại: {xlsx_path}")
 
 def main():
     """Hàm chính điều phối việc crawl dữ liệu."""
-    os.makedirs(DATA_DIR, exist_ok=True)
+    os.makedirs(JSON_DIR, exist_ok=True)
+    os.makedirs(XLSX_DIR, exist_ok=True)
     
+    existing_urls = load_existing_urls(JSON_FILE)
+    print(f"Đã tìm thấy {len(existing_urls)} URL đã được crawl.")
+
     with create_session() as session:
         print("Bước 1: Thu thập tất cả URLs...")
-        all_article_urls = []
+        url_info_list = []
         for category, sub_categories in tqdm.tqdm(TYPE_DICT.items(), desc="Categories"):
             for sub_cat in sub_categories:
-                all_article_urls.extend(get_article_urls(session, category, sub_cat))
+                urls = get_article_urls(session, category, sub_cat)
+                for url in urls:
+                    url_info_list.append({'url': url, 'cat': category, 'sub': sub_cat})
         
-        print(f"Tổng cộng thu được {len(all_article_urls)} URLs.")
-        print("\nBước 2: Bắt đầu crawl chi tiết bài báo...")
-        all_articles = []
+        new_urls_to_scrape = [info for info in url_info_list if info['url'] not in existing_urls]
+        
+        print(f"Tổng cộng {len(url_info_list)} URL, trong đó có {len(new_urls_to_scrape)} URL mới.")
+        if not new_urls_to_scrape:
+            print("Không có bài báo mới nào để crawl.")
+            return
+
+        print("\nBước 2: Bắt đầu crawl chi tiết bài báo mới...")
+        new_articles = []
         with ThreadPoolExecutor(max_workers=MAX_CONCURRENT_WORKERS) as executor:
-            future_to_url = {executor.submit(scrape_article_details, session, url): url for url in all_article_urls}
-            progress_bar = tqdm.tqdm(as_completed(future_to_url), total=len(all_article_urls), desc="Crawling Articles")
+            future_to_url = {
+                executor.submit(scrape_article_details, session, info['url'], info['cat'], info['sub']): info 
+                for info in new_urls_to_scrape
+            }
+            progress_bar = tqdm.tqdm(as_completed(future_to_url), total=len(new_urls_to_scrape), desc="Crawling Articles")
             for future in progress_bar:
                 if result := future.result():
-                    all_articles.append(result)
+                    new_articles.append(result)
 
-    print(f"\nBước 3: Lưu {len(all_articles)} bài báo vào file...")
-    json_export(all_articles)
+    if not new_articles:
+        print("Không crawl được bài báo hợp lệ nào.")
+        return
+
+    print(f"\nBước 3: Lưu {len(new_articles)} bài báo mới vào file...")
+    json_export(new_articles)
     xlsx_convert(JSON_FILE, XLSX_FILE)
 
 if __name__ == "__main__":
