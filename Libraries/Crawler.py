@@ -25,9 +25,9 @@ class VnExpressCrawler:
         self.base_url = config.get("BASE_URL", "https://vnexpress.net")
         self.data_dir = config.get("DATA_DIR", "../Database")
         self.min_year = config.get("MIN_YEAR", 2020)
-        self.min_words = config.get("MIN_WORDS", 300)
+        self.min_words = config.get("MIN_WORDS", 200)
         self.max_words = config.get("MAX_WORDS", 1000)
-        self.target_articles = config.get("TARGET_ARTICLES_PER_SUBTYPE", 33)
+        self.target_articles = config.get("TARGET_ARTICLES_PER_SUBTYPE", 25)
         self.max_workers = config.get("MAX_CONCURRENT_WORKERS", 10)
         self.validation_count = config.get("VALIDATION_ARTICLES_COUNT", 10)
         self.type_dict = config.get("TYPE_DICT", {})
@@ -57,7 +57,7 @@ class VnExpressCrawler:
     def _fetch_page_content(self, session, url):
         """Lấy nội dung HTML của một URL an toàn."""
         try:
-            response = session.get(url, headers=self.HEADERS, timeout=30)
+            response = session.get(url, headers=self.HEADERS, timeout=10)
             response.raise_for_status()
             return response.content
         except requests.exceptions.RequestException:
