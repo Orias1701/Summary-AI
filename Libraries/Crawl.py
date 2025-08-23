@@ -1,3 +1,4 @@
+import pandas as pd
 import requests
 import json
 import os
@@ -12,7 +13,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 # --- CONFIGURATION ---
 BASE_URL = "https://vnexpress.net"
 DATA_DIR = "../Database"
-URLS_FILE = os.path.join(DATA_DIR, "vnexpress_articles.jsonl")
+JSON_FILE = os.path.join(f"{DATA_DIR}/JSON", "vnexpress_articles.jsonl")
+XLSX_FILE = os.path.join(f"{DATA_DIR}/XLSX", "vnexpress_articles.xlsx")
 MIN_YEAR = 2020
 MAX_WORDS = 1000
 TARGET_ARTICLES_PER_SUBTYPE = 33
@@ -119,6 +121,43 @@ def scrape_article_details(session, article_url):
         }
     return None
 
+def json_export(all_articles):
+    with open(JSON_FILE, "w", encoding="utf-8") as f:
+        for article in all_articles:
+            f.write(json.dumps(article, ensure_ascii=False) + "\n")
+            
+    print(f"Hoàn thành! Dữ liệu đã lưu tại {JSON_FILE}")
+
+def xlsx_convert(jsonl_path, xlsx_path):
+    """
+    Đọc dữ liệu từ file JSON Lines và xuất ra file Excel.
+    """
+    print(f"Đang đọc dữ liệu từ file: {jsonl_path}")
+    data_list = []
+    try:
+        with open(jsonl_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                data_list.append(json.loads(line))
+
+    except FileNotFoundError:
+        print(f"Lỗi: Không tìm thấy file {jsonl_path}")
+        return
+    except json.JSONDecodeError:
+        print(f"Lỗi: File {jsonl_path} có định dạng JSON không hợp lệ.")
+        return
+
+    if not data_list:
+        print("Không có dữ liệu để chuyển đổi.")
+        return
+
+    print("Đang chuyển đổi dữ liệu sang dạng bảng...")
+    df = pd.DataFrame(data_list)
+
+    print(f"Đang ghi dữ liệu ra file Excel: {xlsx_path}")
+    df.to_excel(xlsx_path, index=False, engine='openpyxl')
+    
+    print(f"Hoàn thành! Đã lưu thành công file tại: {xlsx_path}")
+
 def main():
     """Hàm chính điều phối việc crawl dữ liệu."""
     os.makedirs(DATA_DIR, exist_ok=True)
@@ -141,11 +180,8 @@ def main():
                     all_articles.append(result)
 
     print(f"\nBước 3: Lưu {len(all_articles)} bài báo vào file...")
-    with open(URLS_FILE, "w", encoding="utf-8") as f:
-        for article in all_articles:
-            f.write(json.dumps(article, ensure_ascii=False) + "\n")
-            
-    print(f"Hoàn thành! Dữ liệu đã lưu tại {URLS_FILE}")
+    json_export(all_articles)
+    xlsx_convert(JSON_FILE, XLSX_FILE)
 
 if __name__ == "__main__":
     main()
