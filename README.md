@@ -47,13 +47,6 @@ SUMMARY AI
 
 ## Setup and Installation
 
-**RECOMENCE: use ANACONDA or MINICONDA**
-
-**conda install cmd:**
-	curl -LO https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe
-**conda version check:**
-	conda --version
-
 #### Stage 1: Data Collection
 
 In the notebook, you will find a cell for configuring the crawler. You can customize the parameters as needed. Running these cells will initiate the data collection and processing. The data will be saved in the `Database` directory.
@@ -68,16 +61,23 @@ The notebook also provides a final cell that allows you to load your newly train
 
 #### Setup step:
 
+**RECOMENCE: use ANACONDA or MINICONDA**
+
+* conda install cmd:
+  * curl -LO https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe
+* conda version check:
+  * conda --version
+
 - Clone this Repository
 - Install necessary extension for Python and Jupyter (VS Code)
 - Install necessary module in virtual envionment:
   - cmd: conda env create -f env.yml	*# This virtual environment will be "master"*
 - Open Main.ipynb and enjoy
 
-------------------------
+---
 
-Why I didnt write this README by Vietnamese? 
+Why didn't I write this README by Vietnamese?
 
 I like to do that =))
 
-------------------------
+---
