@@ -99,11 +99,14 @@ class CategoryValidator(BaseCrawler):
                         title_tags = soup.find_all(class_="title-news")
                         urls_to_check = [tag.find("a").get("href") for tag in title_tags if tag.find("a")]
                         
+                        validated = 0
                         for url in urls_to_check[:self.validation_count]:
                             if self.scrapeTemporaryArticle(session, url):
-                                valid_subcategories.append({'cat': category, 'sub': sub_cat})
-                                tqdm.tqdm.write(f"[HỢP LỆ] Sub-category: {category}/{sub_cat}")
-                                break
+                                validated += 1
+                                if validated >= self.validation_count / 5:
+                                    valid_subcategories.append({'cat': category, 'sub': sub_cat})
+                                    tqdm.tqdm.write(f"[HỢP LỆ] Sub-category: {category}/{sub_cat}")
+                                    break
                     pbar_scan.update(1)
             pbar_scan.close()
         print(f"--- Hoàn thành Giai đoạn 1. Tìm thấy {len(valid_subcategories)} sub-category hợp lệ. ---")
