@@ -1,19 +1,15 @@
 # Tên file: Libraries/Crawler.py
 
-import pandas as pd
 import requests
-import json
-import os
 import re
 import tqdm
 import time
 import random
-import itertools
 from bs4 import BeautifulSoup
 from datetime import datetime
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
-from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # --- LỚP CƠ SỞ (BASE CLASS) ---
 class BaseCrawler:
@@ -160,11 +156,7 @@ class UrlCollector(BaseCrawler):
         return urls
 
     def run(self, valid_subcategories, categories_to_process: list):
-        """
-        Nhận danh sách sub-category hợp lệ và danh sách category muốn xử lý.
-        """
         all_urls_info = []
-        # Lọc ra các sub-category thuộc category muốn xử lý
         subcategories_to_process = [
             sub for sub in valid_subcategories if sub['cat'] in categories_to_process
         ]
@@ -210,22 +202,25 @@ class ArticleCrawler(BaseCrawler):
         word_count = len(article_body.split())
 
         if self.min_words < word_count < self.max_words:
-            # Gán category mặc định
             return {"category": default_category, "sub_category": sub_category, "url": url, "title": title, "description": description, "content": article_body, "date": date_obj.strftime("%Y-%m-%d %H:%M:%S"), "words": word_count}
         return None
     
     def run(self, urls_to_crawl, category: str, existing_article_urls=set()):
-        """Nhận vào tham số 'category'."""
+        """
+        Crawl và trả về danh sách bài viết mới và danh sách URL đã crawl thành công.
+        """
         final_urls_to_scrape = [info for info in urls_to_crawl if info['url'] not in existing_article_urls]
         
         print(f"\n--- Bắt đầu crawl {len(final_urls_to_scrape)} URL cho category '{category}' ---")
-        if not final_urls_to_scrape: return [], []
+        if not final_urls_to_scrape: 
+            # Vẫn trả về 2 giá trị để đảm bảo tính nhất quán
+            return [], []
 
         new_articles = []
+        crawled_urls = [] # Danh sách mới để lưu các URL đã crawl thành công
         try:
             with self.createSession() as session:
                 with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                    # Truyền thêm tham số 'category' vào
                     future_to_info = {executor.submit(self.scrapeArticleDetails, session, info, category): info for info in final_urls_to_scrape}
                     progress_bar = tqdm.tqdm(as_completed(future_to_info), total=len(final_urls_to_scrape), desc=f"Crawling {category}")
                     
@@ -233,9 +228,15 @@ class ArticleCrawler(BaseCrawler):
                         try:
                             if result := future.result():
                                 new_articles.append(result)
-                        except Exception: continue
+                                # Thêm URL vào danh sách đã crawl thành công
+                                crawled_urls.append(result['url']) 
+                        except Exception: 
+                            continue
         except KeyboardInterrupt:
             print("\n[DỪNG] Đã nhận lệnh dừng từ người dùng.")
+            print(f"--- Kết thúc crawl. Thu được {len(new_articles)} bài báo mới. ---")
+            return new_articles, crawled_urls
         finally:
             print(f"--- Kết thúc crawl. Thu được {len(new_articles)} bài báo mới. ---")
-            return new_articles
+            # Trả về cả hai danh sách
+            return new_articles, crawled_urls
