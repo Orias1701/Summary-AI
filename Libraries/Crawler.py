@@ -17,9 +17,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 
 # --- LỚP CƠ SỞ (BASE CLASS) ---
 class BaseCrawler:
-    """
-    Lớp cơ sở chứa các hàm và thuộc tính chung. Sử dụng 'requests'.
-    """
     def __init__(self, config):
         self.base_url = config.get("BASE_URL", "https://vnexpress.net")
         self.min_year = config.get("MIN_YEAR", 2020)
@@ -59,7 +56,6 @@ class BaseCrawler:
         date_str = re.sub(r"\s\(GMT[+-]\d{1,2}\)", "", date_str)
         try: return datetime.strptime(date_str, "%A, %d/%m/%Y, %H:%M")
         except ValueError: return None
-
 
 # --- GIAI ĐOẠN 1: KIỂM TRA CHUYÊN MỤC ---
 class CategoryValidator(BaseCrawler):
@@ -119,94 +115,85 @@ class CategoryValidator(BaseCrawler):
         return valid_subcategories
 
 
-# --- GIAI ĐOẠN 2: THU THẬP URL ---
+# --- GIAI ĐOẠN 2: THU THẬP URL (ĐÃ CẬP NHẬT) ---
 class UrlCollector(BaseCrawler):
     def __init__(self, config):
         super().__init__(config)
         self.target_articles = config.get("TARGET_ARTICLES_PER_SUBTYPE", 30)
         self.page_timeout = config.get("URL_PAGE_TIMEOUT", 10)
-        self.max_page_failures = config.get("URL_MAX_PAGE_FAILURES", 3)
-        self.max_subcategory_failures = config.get("URL_MAX_SUBCATEGORY_FAILURES", 3)
-
+    
     def _collectSubcategoryUrls(self, session, category, sub_category):
         urls = []
         page_num = 1
-        consecutive_page_failures = 0
         pbar = tqdm.tqdm(total=self.target_articles, desc=f"URL: {category}/{sub_category}")
+        time_of_last_progress = time.time()
         
         while len(urls) < self.target_articles:
-            if consecutive_page_failures >= self.max_page_failures:
-                tqdm.tqdm.write(f"[!] Bỏ qua sub-category: '{category}/{sub_category}' do {self.max_page_failures} lần timeout liên tiếp.")
-                pbar.close()
-                return None # Trả về None để báo hiệu thất bại
-            
+            if time.time() - time_of_last_progress > self.page_timeout:
+                tqdm.tqdm.write(f"[!] Timeout: Bỏ qua sub-category '{category}/{sub_category}'.")
+                break
+
             list_url = f"{self.base_url}/{category}/{sub_category}-p{page_num}"
             content = self.fetchPageContent(session, list_url, timeout=self.page_timeout)
             
             if not content:
-                consecutive_page_failures += 1
                 page_num += 1
                 continue
 
             soup = BeautifulSoup(content, "lxml")
             title_tags = soup.find_all(class_="title-news")
-            if not title_tags:
-                consecutive_page_failures += 1
-                page_num += 1
-                continue
+            if not title_tags: break
 
             found_new = False
             for title in title_tags:
                 if link := title.find("a", href=True):
-                    urls.append({'url': link['href'], 'cat': category, 'sub': sub_category})
+                    # Thay đổi dữ liệu trả về ở đây
+                    urls.append({'url': link['href'], 'sub': sub_category})
                     pbar.update(1)
                     found_new = True
                     if len(urls) >= self.target_articles: break
             
-            if found_new: consecutive_page_failures = 0
-            else: consecutive_page_failures += 1
+            if found_new: time_of_last_progress = time.time()
             page_num += 1
         
         pbar.close()
         return urls
 
-    def run(self, valid_subcategories):
+    def run(self, valid_subcategories, categories_to_process: list):
+        """
+        Nhận danh sách sub-category hợp lệ và danh sách category muốn xử lý.
+        """
         all_urls_info = []
-        grouped_by_cat = {k: list(v) for k, v in itertools.groupby(sorted(valid_subcategories, key=lambda x: x['cat']), key=lambda x: x['cat'])}
+        # Lọc ra các sub-category thuộc category muốn xử lý
+        subcategories_to_process = [
+            sub for sub in valid_subcategories if sub['cat'] in categories_to_process
+        ]
         
+        if not subcategories_to_process:
+            print(f"Không tìm thấy sub-category hợp lệ nào cho các category: {categories_to_process}")
+            return []
+
+        print(f"\n--- Bắt đầu thu thập URL từ {len(subcategories_to_process)} sub-category được chọn ---")
         try:
             with self.createSession() as session:
-                for category, subcategories_list in grouped_by_cat.items():
-                    consecutive_subcategory_failures = 0
-                    print(f"\n--- Đang xử lý category: {category} ---")
-                    
-                    for sub_info in subcategories_list:
-                        if consecutive_subcategory_failures >= self.max_subcategory_failures:
-                            tqdm.tqdm.write(f"[!!] Bỏ qua category: '{category}' do {self.max_subcategory_failures} sub-category lỗi liên tiếp.")
-                            break # Thoát vòng lặp sub-category, chuyển sang category tiếp theo
-                        
-                        result = self._collectSubcategoryUrls(session, sub_info['cat'], sub_info['sub'])
-                        if result is not None:
-                            all_urls_info.extend(result)
-                            consecutive_subcategory_failures = 0
-                        else:
-                            consecutive_subcategory_failures += 1
+                for sub_info in subcategories_to_process:
+                    all_urls_info.extend(self._collectSubcategoryUrls(session, sub_info['cat'], sub_info['sub']))
         except KeyboardInterrupt:
             print("\n[DỪNG] Đã nhận lệnh dừng từ người dùng.")
         finally:
-            print(f"--- Giai đoạn 2 Kết thúc. Thu thập được tổng cộng {len(all_urls_info)} URL. ---")
+            print(f"--- Giai đoạn 2 Kết thúc. Thu thập được {len(all_urls_info)} URL. ---")
             return all_urls_info
 
-# --- GIAI ĐOẠN 3: CRAWL NỘI DUNG ---
+# --- GIAI ĐOẠN 3: CRAWL NỘI DUNG (ĐÃ CẬP NHẬT) ---
 class ArticleCrawler(BaseCrawler):
     def __init__(self, config):
         super().__init__(config)
         self.max_workers = config.get("MAX_CONCURRENT_WORKERS", 6)
         self.article_timeout = config.get("ARTICLE_TIMEOUT", 5)
 
-    def scrapeArticleDetails(self, session, url_info):
+    def scrapeArticleDetails(self, session, url_info, default_category: str):
+        """Nhận category mặc định từ tham số."""
         url = url_info['url']
-        category = url_info['cat']
         sub_category = url_info['sub']
         
         content = self.fetchPageContent(session, url, timeout=self.article_timeout)
@@ -223,32 +210,32 @@ class ArticleCrawler(BaseCrawler):
         word_count = len(article_body.split())
 
         if self.min_words < word_count < self.max_words:
-            return {"category": category, "sub_category": sub_category, "url": url, "title": title, "description": description, "content": article_body, "date": date_obj.strftime("%Y-%m-%d %H:%M:%S"), "words": word_count}
+            # Gán category mặc định
+            return {"category": default_category, "sub_category": sub_category, "url": url, "title": title, "description": description, "content": article_body, "date": date_obj.strftime("%Y-%m-%d %H:%M:%S"), "words": word_count}
         return None
     
-    def run(self, urls_to_crawl, existing_article_urls=set()):
+    def run(self, urls_to_crawl, category: str, existing_article_urls=set()):
+        """Nhận vào tham số 'category'."""
         final_urls_to_scrape = [info for info in urls_to_crawl if info['url'] not in existing_article_urls]
         
-        print(f"\n--- Giai đoạn 3: Bắt đầu crawl nội dung từ {len(final_urls_to_scrape)} URL mới ---")
+        print(f"\n--- Bắt đầu crawl {len(final_urls_to_scrape)} URL cho category '{category}' ---")
         if not final_urls_to_scrape: return [], []
 
         new_articles = []
-        crawled_urls = []
         try:
             with self.createSession() as session:
                 with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                    future_to_info = {executor.submit(self.scrapeArticleDetails, session, info): info for info in final_urls_to_scrape}
-                    progress_bar = tqdm.tqdm(as_completed(future_to_info), total=len(final_urls_to_scrape), desc="Crawling Articles")
+                    # Truyền thêm tham số 'category' vào
+                    future_to_info = {executor.submit(self.scrapeArticleDetails, session, info, category): info for info in final_urls_to_scrape}
+                    progress_bar = tqdm.tqdm(as_completed(future_to_info), total=len(final_urls_to_scrape), desc=f"Crawling {category}")
                     
                     for future in progress_bar:
                         try:
-                            result = future.result()
-                            if result:
+                            if result := future.result():
                                 new_articles.append(result)
-                                crawled_urls.append(result['url'])
                         except Exception: continue
         except KeyboardInterrupt:
             print("\n[DỪNG] Đã nhận lệnh dừng từ người dùng.")
         finally:
-            print(f"--- Giai đoạn 3 Kết thúc. Crawl thành công {len(new_articles)} bài báo. ---")
-            return new_articles, crawled_urls
+            print(f"--- Kết thúc crawl. Thu được {len(new_articles)} bài báo mới. ---")
+            return new_articles
