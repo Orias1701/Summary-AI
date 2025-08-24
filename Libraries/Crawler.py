@@ -19,29 +19,54 @@ class BaseCrawler:
         self.min_year = config.get("MIN_YEAR", 2020)
         self.min_words = config.get("MIN_WORDS", 200)
         self.max_words = config.get("MAX_WORDS", 1000)
-
-        self.USER_AGENTS = [
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0',
-        ]
+        self.HEADERS = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Cache-Control': 'max-age=0',
+        }
         self.VIETNAMESE_DAYS = {"Chủ nhật": "Sunday", "Thứ hai": "Monday", "Thứ ba": "Tuesday", "Thứ tư": "Wednesday", "Thứ năm": "Thursday", "Thứ sáu": "Friday", "Thứ bảy": "Saturday"}
 
     def createSession(self):
         session = requests.Session()
-        # retries = Retry(total=5, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
-        # adapter = HTTPAdapter(max_retries=retries)
-        # session.mount("http://", adapter)
-        # session.mount("https://", adapter)
+        retries = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=[500, 502, 503, 504],
+            allowed_methods=["HEAD", "GET", "OPTIONS"]
+        )
+
+        adapter = HTTPAdapter(max_retries=retries)
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+
         return session
 
     def fetchPageContent(self, session, url):
         try:
             time.sleep(random.uniform(0.5, 1.5))
-            headers = {'User-Agent': random.choice(self.USER_AGENTS)}
-            response = session.get(url, headers=headers, timeout=30)
+            response = session.get(url, headers=self.HEADERS, timeout=10)
             response.raise_for_status()
+            print(f"[OK] Fetched: {url}")
             return response.content
-        except requests.exceptions.RequestException:
+
+        except requests.exceptions.Timeout:
+            print(f"[TIMEOUT] Request to {url} took too long.")
+            return None
+
+        except requests.exceptions.HTTPError as e:
+            print(f"[HTTP ERROR] {url} returned status {e.response.status_code}.")
+            return None
+
+        except requests.exceptions.ConnectionError:
+            print(f"[CONNECTION ERROR] Failed to connect to {url}.")
+            return None
+
+        except requests.exceptions.RequestException as e:
+            print(f"[REQUEST ERROR] {url} failed with error: {e}")
             return None
 
     def convertVietnameseDate(self, date_str):
@@ -179,15 +204,13 @@ class ArticleCrawler(BaseCrawler):
     def __init__(self, config):
         super().__init__(config)
         self.max_workers = config.get("MAX_CONCURRENT_WORKERS", 6)
-        # Thêm 2 tham số mới từ config
         self.article_timeout = config.get("ARTICLE_TIMEOUT", 10)
         self.max_failures = config.get("MAX_CONSECUTIVE_FAILURES", 3)
 
     def scrapeArticleDetails(self, session, url_info):
-        """
-        Lấy chi tiết nội dung từ một dictionary thông tin URL.
-        (Hàm này không thay đổi)
-        """
+
+        # Lấy chi tiết nội dung từ một dictionary thông tin URL.
+
         url = url_info['url']
         category = url_info['cat']
         sub_category = url_info['sub']
@@ -202,11 +225,12 @@ class ArticleCrawler(BaseCrawler):
         
         if not all([title, description, date_obj]) or date_obj.year < self.min_year:
             return None
-
+        
         article_body = " ".join(p.get_text(" ", strip=True) for p in soup.find_all("p", class_="Normal"))
         word_count = len(article_body.split())
 
         if self.min_words < word_count < self.max_words:
+            print(f"{sub_category}: Success")
             return {
                 "category": category, "sub_category": sub_category, "url": url,
                 "title": title, "description": description, "content": article_body,
@@ -215,10 +239,10 @@ class ArticleCrawler(BaseCrawler):
         return None
     
     def run(self, urls_to_crawl, existing_article_urls=set()):
-        """
-        Nhận danh sách URL, crawl đa luồng với cơ chế timeout và tự động ngắt.
-        Trả về: list các dictionary bài viết (định dạng JSON).
-        """
+
+        # Nhận danh sách URL, crawl đa luồng với cơ chế timeout và tự động ngắt.
+        # Trả về: list các dictionary bài viết (định dạng JSON).
+
         final_urls_to_scrape = [info for info in urls_to_crawl if info['url'] not in existing_article_urls]
         
         print(f"\n--- Giai đoạn 3: Bắt đầu crawl nội dung ---")
@@ -242,7 +266,6 @@ class ArticleCrawler(BaseCrawler):
                 
                 for future in progress_bar:
                     try:
-                        # Thêm timeout vào lúc lấy kết quả
                         result = future.result(timeout=self.article_timeout)
                         
                         if result:
