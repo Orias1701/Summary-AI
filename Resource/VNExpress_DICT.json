@@ -1,0 +1,262 @@
+[
+    {
+        "cat": "thoi-su",
+        "sub": "chinh-tri"
+    },
+    {
+        "cat": "thoi-su",
+        "sub": "huong-toi-ky-nguyen-moi"
+    },
+    {
+        "cat": "thoi-su",
+        "sub": "80-nam-quoc-khanh"
+    },
+    {
+        "cat": "thoi-su",
+        "sub": "dan-sinh"
+    },
+    {
+        "cat": "thoi-su",
+        "sub": "lao-dong-viec-lam"
+    },
+    {
+        "cat": "thoi-su",
+        "sub": "giao-thong"
+    },
+    {
+        "cat": "thoi-su",
+        "sub": "quy-hy-vong"
+    },
+    {
+        "cat": "the-gioi",
+        "sub": "tu-lieu"
+    },
+    {
+        "cat": "the-gioi",
+        "sub": "phan-tich"
+    },
+    {
+        "cat": "the-gioi",
+        "sub": "nguoi-viet-5-chau"
+    },
+    {
+        "cat": "the-gioi",
+        "sub": "cuoc-song-do-day"
+    },
+    {
+        "cat": "the-gioi",
+        "sub": "quan-su"
+    },
+    {
+        "cat": "kinh-doanh",
+        "sub": "net-zero"
+    },
+    {
+        "cat": "kinh-doanh",
+        "sub": "quoc-te"
+    },
+    {
+        "cat": "kinh-doanh",
+        "sub": "doanh-nghiep"
+    },
+    {
+        "cat": "kinh-doanh",
+        "sub": "chung-khoan"
+    },
+    {
+        "cat": "kinh-doanh",
+        "sub": "ebank"
+    },
+    {
+        "cat": "kinh-doanh",
+        "sub": "vi-mo"
+    },
+    {
+        "cat": "kinh-doanh",
+        "sub": "hang-hoa"
+    },
+    {
+        "cat": "kinh-doanh",
+        "sub": "bao-hiem"
+    },
+    {
+        "cat": "kinh-doanh",
+        "sub": "tuyen-dung"
+    },
+    {
+        "cat": "bat-dong-san",
+        "sub": "chinh-sach"
+    },
+    {
+        "cat": "bat-dong-san",
+        "sub": "thi-truong"
+    },
+    {
+        "cat": "bat-dong-san",
+        "sub": "khong-gian-song"
+    },
+    {
+        "cat": "bat-dong-san",
+        "sub": "tu-van"
+    },
+    {
+        "cat": "khoa-hoc",
+        "sub": "khoa-hoc-trong-nuoc"
+    },
+    {
+        "cat": "khoa-hoc",
+        "sub": "pii-doi-moi-sang-tao"
+    },
+    {
+        "cat": "khoa-hoc",
+        "sub": "tin-tuc"
+    },
+    {
+        "cat": "khoa-hoc",
+        "sub": "phat-minh"
+    },
+    {
+        "cat": "khoa-hoc",
+        "sub": "ung-dung"
+    },
+    {
+        "cat": "khoa-hoc",
+        "sub": "the-gioi-tu-nhien"
+    },
+    {
+        "cat": "khoa-hoc",
+        "sub": "thuong-thuc"
+    },
+    {
+        "cat": "giai-tri",
+        "sub": "gioi-sao"
+    },
+    {
+        "cat": "giai-tri",
+        "sub": "sach"
+    },
+    {
+        "cat": "giai-tri",
+        "sub": "phim"
+    },
+    {
+        "cat": "giai-tri",
+        "sub": "nhac"
+    },
+    {
+        "cat": "giai-tri",
+        "sub": "thoi-trang"
+    },
+    {
+        "cat": "giai-tri",
+        "sub": "lam-dep"
+    },
+    {
+        "cat": "giai-tri",
+        "sub": "san-khau-my-thuat"
+    },
+    {
+        "cat": "the-thao",
+        "sub": "bong-da"
+    },
+    {
+        "cat": "the-thao",
+        "sub": "du-lieu-bong-da"
+    },
+    {
+        "cat": "the-thao",
+        "sub": "marathon"
+    },
+    {
+        "cat": "the-thao",
+        "sub": "tennis"
+    },
+    {
+        "cat": "the-thao",
+        "sub": "cac-mon-khac"
+    },
+    {
+        "cat": "the-thao",
+        "sub": "hau-truong"
+    },
+    {
+        "cat": "phap-luat",
+        "sub": "tu-van"
+    },
+    {
+        "cat": "giao-duc",
+        "sub": "tin-tuc"
+    },
+    {
+        "cat": "giao-duc",
+        "sub": "tuyen-sinh"
+    },
+    {
+        "cat": "giao-duc",
+        "sub": "chan-dung"
+    },
+    {
+        "cat": "giao-duc",
+        "sub": "du-hoc"
+    },
+    {
+        "cat": "giao-duc",
+        "sub": "thao-luan"
+    },
+    {
+        "cat": "giao-duc",
+        "sub": "hoc-tieng-anh"
+    },
+    {
+        "cat": "giao-duc",
+        "sub": "giao-duc-40"
+    },
+    {
+        "cat": "suc-khoe",
+        "sub": "tin-tuc"
+    },
+    {
+        "cat": "suc-khoe",
+        "sub": "cac-benh"
+    },
+    {
+        "cat": "suc-khoe",
+        "sub": "vaccine"
+    },
+    {
+        "cat": "suc-khoe",
+        "sub": "song-khoe"
+    },
+    {
+        "cat": "doi-song",
+        "sub": "nhip-song"
+    },
+    {
+        "cat": "doi-song",
+        "sub": "to-am"
+    },
+    {
+        "cat": "doi-song",
+        "sub": "bai-hoc-song"
+    },
+    {
+        "cat": "doi-song",
+        "sub": "tieu-dung"
+    },
+    {
+        "cat": "oto-xe-may",
+        "sub": "thi-truong"
+    },
+    {
+        "cat": "oto-xe-may",
+        "sub": "dien-dan"
+    },
+    {
+        "cat": "oto-xe-may",
+        "sub": "v-car"
+    },
+    {
+        "cat": "oto-xe-may",
+        "sub": "cam-lai"
+    }
+]

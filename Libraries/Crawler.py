@@ -28,10 +28,10 @@ class BaseCrawler:
 
     def createSession(self):
         session = requests.Session()
-        retries = Retry(total=5, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
-        adapter = HTTPAdapter(max_retries=retries)
-        session.mount("http://", adapter)
-        session.mount("https://", adapter)
+        # retries = Retry(total=5, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
+        # adapter = HTTPAdapter(max_retries=retries)
+        # session.mount("http://", adapter)
+        # session.mount("https://", adapter)
         return session
 
     def fetchPageContent(self, session, url):
@@ -118,6 +118,7 @@ class UrlCollector(BaseCrawler):
     def __init__(self, config):
         super().__init__(config)
         self.target_articles = config.get("TARGET_ARTICLES_PER_SUBTYPE", 30)
+        self.progress_timeout = config.get("PROGRESS_TIMEOUT", 10)
 
     def collectSubcategoryUrls(self, session, category, sub_category):
 
@@ -127,7 +128,13 @@ class UrlCollector(BaseCrawler):
         page_num = 1
         pbar = tqdm.tqdm(total=self.target_articles, desc=f"Lấy URL: {category}/{sub_category}")
         
+        time_of_last_progress = time.time()
         while len(urls) < self.target_articles:
+            # 1. Kiểm tra timeout ở đầu mỗi vòng lặp
+            if time.time() - time_of_last_progress > self.progress_timeout:
+                tqdm.tqdm.write(f"\n[!] Timeout: Không tìm thấy URL mới trong {self.progress_timeout} giây cho mục {category}/{sub_category}. Bỏ qua.")
+                break
+
             list_url = f"{self.base_url}/{category}/{sub_category}-p{page_num}"
             content = self.fetchPageContent(session, list_url)
             if not content: break
@@ -136,12 +143,18 @@ class UrlCollector(BaseCrawler):
             title_tags = soup.find_all(class_="title-news")
             if not title_tags: break
             
+            urls_found_on_this_page = 0
             for title in title_tags:
                 link_tag = title.find("a")
                 if link_tag and link_tag.get("href"):
                     urls.append({'url': link_tag.get("href"), 'cat': category, 'sub': sub_category})
                     pbar.update(1)
+                    urls_found_on_this_page += 1
                     if len(urls) >= self.target_articles: break
+            
+            if urls_found_on_this_page > 0:
+                time_of_last_progress = time.time()
+            
             page_num += 1
         
         pbar.close()
@@ -161,17 +174,20 @@ class UrlCollector(BaseCrawler):
         return all_urls_info
 
 
-# --- GIAI ĐOẠN 3: CRAWL NỘI DUNG ---
+# --- GIAI ĐOẠN 3: CRAWL NỘI DUNG (ĐÃ CẬP NHẬT) ---
 class ArticleCrawler(BaseCrawler):
     def __init__(self, config):
         super().__init__(config)
         self.max_workers = config.get("MAX_CONCURRENT_WORKERS", 6)
+        # Thêm 2 tham số mới từ config
+        self.article_timeout = config.get("ARTICLE_TIMEOUT", 10)
+        self.max_failures = config.get("MAX_CONSECUTIVE_FAILURES", 3)
 
-   
     def scrapeArticleDetails(self, session, url_info):
-        
-        # Lấy chi tiết nội dung từ dict.
-        
+        """
+        Lấy chi tiết nội dung từ một dictionary thông tin URL.
+        (Hàm này không thay đổi)
+        """
         url = url_info['url']
         category = url_info['cat']
         sub_category = url_info['sub']
@@ -199,10 +215,10 @@ class ArticleCrawler(BaseCrawler):
         return None
     
     def run(self, urls_to_crawl, existing_article_urls=set()):
-
-        # Nhận danh sách URL, crawl đa luồng.
-        # Trả về: list các dictionary bài viết (định dạng JSON).
-
+        """
+        Nhận danh sách URL, crawl đa luồng với cơ chế timeout và tự động ngắt.
+        Trả về: list các dictionary bài viết (định dạng JSON).
+        """
         final_urls_to_scrape = [info for info in urls_to_crawl if info['url'] not in existing_article_urls]
         
         print(f"\n--- Giai đoạn 3: Bắt đầu crawl nội dung ---")
@@ -213,14 +229,35 @@ class ArticleCrawler(BaseCrawler):
             return []
 
         new_articles = []
+        consecutive_failures = 0
+        
         with self.createSession() as session:
             with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                future_to_info = {executor.submit(self.scrapeArticleDetails, session, info): info for info in final_urls_to_scrape}
+                future_to_info = {
+                    executor.submit(self.scrapeArticleDetails, session, info): info 
+                    for info in final_urls_to_scrape
+                }
                 
                 progress_bar = tqdm.tqdm(as_completed(future_to_info), total=len(final_urls_to_scrape), desc="Crawling Articles")
+                
                 for future in progress_bar:
-                    if result := future.result():
-                        new_articles.append(result)
+                    try:
+                        # Thêm timeout vào lúc lấy kết quả
+                        result = future.result(timeout=self.article_timeout)
+                        
+                        if result:
+                            new_articles.append(result)
+                            consecutive_failures = 0
+
+                    except TimeoutError:
+                        consecutive_failures += 1
+
+                    # Kiểm tra điều kiện dừng sau mỗi lần xử lý
+                    if consecutive_failures >= self.max_failures:
+                        tqdm.tqdm.write(f"\n[CẢNH BÁO] Đã có {self.max_failures} lỗi liên tiếp. Dừng crawl...")
+                        for f in future_to_info:
+                            f.cancel()
+                        break
 
         print(f"--- Hoàn thành Giai đoạn 3. Crawl được {len(new_articles)} bài báo mới. ---")
         return new_articles
