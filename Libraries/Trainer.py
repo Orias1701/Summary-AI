@@ -50,7 +50,8 @@ class SummarizationTrainer:
                     continue
         
         df = pd.DataFrame(data_list)
-        df = df[["content", "description"]].rename(columns={"content": "text", "description": "summary"}).dropna()
+        df = df[["article", "summary"]].rename(columns={"article": "article", "summary": "summary"}).dropna()
+        # df = df[["content", "description"]].rename(columns={"content": "article", "description": "summary"}).dropna()
 
         print(f"Tổng cộng có {len(df)} mẫu dữ liệu hợp lệ.")
         
@@ -64,7 +65,7 @@ class SummarizationTrainer:
 
     def _preprocess_function(self, examples):
         """Hàm tiền xử lý, chuyển văn bản thành các ID mà model hiểu được."""
-        inputs = self.tokenizer(examples["text"], max_length=self.max_input_length, truncation=True)
+        inputs = self.tokenizer(examples["article"], max_length=self.max_input_length, truncation=True)
         with self.tokenizer.as_target_tokenizer():
             labels = self.tokenizer(examples["summary"], max_length=self.max_target_length, truncation=True)
         inputs["labels"] = labels["input_ids"]
