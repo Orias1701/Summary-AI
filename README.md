@@ -34,7 +34,10 @@ SUMMARY AI
 │  └─ XLSX/
 │
 ├─ Libraries/			# Directory of defined modules.
+│  ├─ API.py			# API Deployer.
 │  ├─ Crawler.py		# The data crawling engine.
+│  ├─ Processor.py		# The data processing engine.
+│  ├─ Sorter.py			# The data Sorting engine.
 │  └─ Trainer.Py		# The model training engine.
 │
 ├─ Models/			# Directory for storing the fine-tuned models.
