@@ -11,7 +11,9 @@ from transformers import (
     DataCollatorForSeq2Seq,
     Seq2SeqTrainingArguments,
     Seq2SeqTrainer,
+    EarlyStoppingCallback,
 )
+
 
 class SummarizationTrainer:
     """
@@ -42,7 +44,8 @@ class SummarizationTrainer:
         data_list = []
         with open(self.data_jsonl_file, 'r', encoding='utf-8') as f:
             for line in f:
-                if not line.strip(): continue
+                if not line.strip():
+                    continue
                 try:
                     data_list.append(json.loads(line))
                 except json.JSONDecodeError:
@@ -56,9 +59,12 @@ class SummarizationTrainer:
         print(f"Tổng cộng có {len(df)} mẫu dữ liệu hợp lệ.")
         
         dataset = Dataset.from_pandas(df)
-        train_test_split = dataset.train_test_split(test_size=0.1)
+        train_test_split = dataset.train_test_split(test_size=0.1, seed=42)
         
-        dataset_dict = DatasetDict({'train': train_test_split['train'], 'validation': train_test_split['test']})
+        dataset_dict = DatasetDict({
+            'train': train_test_split['train'],
+            'validation': train_test_split['test']
+        })
         
         print(f"Dữ liệu đã chia: {len(dataset_dict['train'])} train, {len(dataset_dict['validation'])} validation.")
         return dataset_dict
@@ -74,14 +80,20 @@ class SummarizationTrainer:
     def _compute_metrics(self, eval_pred):
         """Tính toán điểm ROUGE trong quá trình validation."""
         predictions, labels = eval_pred
+
+        # Decode prediction
         decoded_preds = self.tokenizer.batch_decode(predictions, skip_special_tokens=True)
+
+        # Decode labels
         labels = np.where(labels != -100, labels, self.tokenizer.pad_token_id)
         decoded_labels = self.tokenizer.batch_decode(labels, skip_special_tokens=True)
         
+        # Tính ROUGE
         rouge_metric = evaluate.load("rouge")
         result = rouge_metric.compute(predictions=decoded_preds, references=decoded_labels, use_stemmer=True)
         result = {key: value * 100 for key, value in result.items()}
         
+        # Độ dài trung bình
         prediction_lens = [np.count_nonzero(pred != self.tokenizer.pad_token_id) for pred in predictions]
         result["gen_len"] = np.mean(prediction_lens)
         
@@ -105,7 +117,8 @@ class SummarizationTrainer:
         # 4. Cấu hình các tham số huấn luyện
         training_args = Seq2SeqTrainingArguments(
             output_dir=self.output_model_dir,
-            eval_strategy="epoch", # Thư viện cũ
+            evaluation_strategy="epoch",        # fix tham số
+            save_strategy="epoch",              # lưu checkpoint mỗi epoch
             learning_rate=self.learning_rate,
             per_device_train_batch_size=self.batch_size,
             per_device_eval_batch_size=self.batch_size,
@@ -115,6 +128,9 @@ class SummarizationTrainer:
             predict_with_generate=True,
             fp16=True,
             push_to_hub=False,
+            load_best_model_at_end=True,        # tự động chọn checkpoint tốt nhất
+            metric_for_best_model="rougeL",     # theo dõi bằng ROUGE-L
+            greater_is_better=True,
         )
 
         data_collator = DataCollatorForSeq2Seq(tokenizer=self.tokenizer, model=model)
@@ -127,6 +143,7 @@ class SummarizationTrainer:
             tokenizer=self.tokenizer,
             data_collator=data_collator,
             compute_metrics=self._compute_metrics,
+            callbacks=[EarlyStoppingCallback(early_stopping_patience=2)]  # dừng sớm nếu không cải thiện
         )
         
         # 5. Bắt đầu huấn luyện
