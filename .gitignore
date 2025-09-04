@@ -1,6 +1,5 @@
 __pycache__
-Database/JSON
-Database/XLSX
+Database
 Models
 Libraries/API.py
 Libraries/Crawler.py
